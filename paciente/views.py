@@ -207,6 +207,8 @@ class ReporteExcel(TemplateView):
         historial = Historial.objects.filter(rut = rut)
         signosvitales = SignosVitales.objects.filter(paciente_rut = rut)
         evolucion = Evaluacion.objects.filter(rut = rut)
+        if evolucion == ""  or signosvitales == "" or historial == "":
+            return
         wb = Workbook()
         controlador = 4
         for q in query:
