@@ -3,6 +3,7 @@ from django.http import  JsonResponse
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
+from pymysql import NULL
 
 from .utils import render_to_pdf
 from .models import Evaluacion, Historial,  Medico, Paciente, SignosVitales
@@ -71,6 +72,10 @@ def nuevoPaciente(request):
             post = form.save(commit = False)
             post.nombreMedico = request.user.username
             post.nombreMedicoAdmin = 'cuidador'
+            if post.snombre == None:
+                post.snombre == ""
+            if post.sapellido == None:
+                post.sapellido == ""
             post.save()
             return redirect ('index')
     else:
@@ -94,6 +99,10 @@ def editarPaciente(request, rut):
     if request.method == "POST":
         form = PacienteForm(request.POST, instance=post)
         if form.is_valid():
+            if post.snombre == None:
+                post.snombre == ""
+            if post.sapellido == None:
+                post.sapellido == ""
             form.save()
             return redirect('index')
     else:
@@ -234,8 +243,6 @@ class ReporteExcel(TemplateView):
         historial = Historial.objects.filter(rut = rut)
         signosvitales = SignosVitales.objects.filter(paciente_rut = rut)
         evolucion = Evaluacion.objects.filter(rut = rut)
-        if evolucion == ""  or signosvitales == "" or historial == "":
-            return
         wb = Workbook()
         controlador = 4
         for q in query:
