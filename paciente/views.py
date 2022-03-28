@@ -1,12 +1,11 @@
-import re
-from urllib import response
 from django.forms.models import model_to_dict
 from django.http import  JsonResponse
-from django.db.models import query
-from django.http import request
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
-from .models import Evaluacion, Historial, LugarAtencion, Medico, Paciente, SignosVitales
+from django.views import View
+
+from .utils import render_to_pdf
+from .models import Evaluacion, Historial,  Medico, Paciente, SignosVitales
 from .forms import EvolucionForm, HistorialForm, MedicoForm, PacienteForm,  SignosForm
 from django.shortcuts import redirect
 from django.views.generic import ListView, CreateView
@@ -19,6 +18,35 @@ from django.db.models import Q
 from django.views.generic.base import TemplateView
 from openpyxl import Workbook
 from openpyxl.styles import Alignment,Border,Font,PatternFill,Side
+
+class Index(CreateView):
+    model = Paciente
+    fields = ('__all__')
+    template_name = 'index.html'
+    success_url = '.'
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        queryset = request.POST["buscar"]
+        if queryset:
+            if self.request.user.is_staff:
+                data = list(Paciente.objects.filter(Q(rut__icontains=queryset) | Q(pnombre__icontains=queryset) | Q(papellido__icontains=queryset) ).distinct().values())
+            else:
+                data = list(Paciente.objects.filter(Q(rut__icontains=queryset) | Q(pnombre__icontains=queryset) | Q(papellido__icontains=queryset) ).filter(nombreMedico = self.request.user.username).distinct().values())
+        else:
+            if self.request.user.is_staff:
+                data = list(Paciente.objects.filter(lugarAtencion=request.POST['id']).values())
+            else:
+                data = list(Paciente.objects.filter(lugarAtencion=request.POST['id']).filter(nombreMedico = self.request.user.username).values())
+        return JsonResponse({'lugaratencion':data})
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["lugarSeleccion"] = Paciente.objects.filter(lugarAtencion=1)
+        return context
 
 def historial(request, rut):
     pacientes = Paciente.objects.filter(rut = rut)
@@ -72,6 +100,19 @@ def editarPaciente(request, rut):
         form = PacienteForm(instance=post)
     return render(request, 'editarpaciente.html', {'form': form})
 
+def cambiarCuidador(request, rut):
+    post = get_object_or_404(Paciente, rut=rut)
+    if request.method == "POST":
+        form = PacienteForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            print('valido')
+            return redirect('index')
+    else:
+        print('invalido')
+        form = PacienteForm(instance=post)
+    return render(request, 'cambiarCuidador.html', {'form': form})
+
 def eliminarPaciente(request,rut):
     paciente = Paciente.objects.filter(rut=rut)
     paciente.delete()
@@ -120,15 +161,23 @@ class NuevoMedico(CreateView):
     template_name = 'nuevomedico.html'
     success_url = reverse_lazy('index')
 
-class NuevoSignosVitales(CreateView):
-    model = SignosVitales
-    form_class = SignosForm
-    template_name = 'signosVitalesForm.html'
-    success_url = reverse_lazy('index')
+def listaCuidadores(request):
+    usuario = Medico.objects.all()
+    datos = {
+        'usuario': usuario
+    }
+    return render(request, 'cuidadores.html',datos)
 
-class SignosViews(ListView):
-    model = SignosVitales
-    template_name = 'signosVitales.html'
+def editarCuidador(request, rut):
+    post = get_object_or_404(Medico, rut = rut)
+    if request.method == "POST":
+        form = MedicoForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            return redirect('index')
+    else:
+        form = MedicoForm(instance=post)
+    return render(request, 'nuevomedico.html', {'form': form, 'editar':True})
 
 def editarHistorial(request, id):
     post = get_object_or_404(Historial, idhistorial=id)
@@ -152,28 +201,6 @@ def editarSignos(request, id):
         form = SignosForm(instance=post)
     return render(request, 'editarSignos.html', {'form': form})
 
-class Index(CreateView):
-    model = Paciente
-    fields = ('__all__')
-    template_name = 'index.html'
-    success_url = '.'
-
-    @method_decorator(csrf_exempt)
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
-    
-    def post(self, request, *args, **kwargs):
-        queryset = request.POST["buscar"]
-        if queryset:
-            data = list(Paciente.objects.filter(Q(rut__icontains=queryset) | Q(pnombre__icontains=queryset) | Q(papellido__icontains=queryset) ).distinct().values())
-        else:
-            data = list(Paciente.objects.filter(lugarAtencion=request.POST['id']).values())
-        return JsonResponse({'lugaratencion':data})
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["lugarSeleccion"] = Paciente.objects.filter(lugarAtencion=1)
-        return context
 
 def evolucion(request, rut):
     pacientes = Paciente.objects.filter(rut = rut)
@@ -784,3 +811,13 @@ class ReporteExcel(TemplateView):
         wb.save(response)
         return response
 
+class ReportePDF(View):
+    def get(self, request, *args, **kwargs):
+        id           = self.kwargs['id']
+        template_name = 'reportePDF.html'
+        evolucion     = Evaluacion.objects.filter(idevaluacion = id)
+        data = {
+            'evolucion': evolucion
+        }
+        pdf = render_to_pdf(template_name, data)
+        return HttpResponse(pdf, content_type='application/pdf')

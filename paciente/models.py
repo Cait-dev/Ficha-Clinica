@@ -1,9 +1,7 @@
 from django.db import models
 from django.db.models.deletion import CASCADE
-from django.db.models.fields.related import ForeignKey
 from django.utils import timezone
-from django.contrib.auth.models import AbstractBaseUser, AbstractUser, BaseUserManager, User, UserManager
-
+from django.contrib.auth.models import  AbstractUser, UserManager
 
 class LugarAtencion(models.Model):
     idLugarAtencion = models.AutoField(primary_key=True)
@@ -50,12 +48,12 @@ class MedicoManager(UserManager):
 
 class Medico(AbstractUser):
     rut          = models.CharField(primary_key=True, max_length=12)
-    nombre       = models.CharField('Nombres del Médico',max_length=30, null=False, blank=False)
-    snombre      = models.CharField('Segundo Nombre del Médico',max_length=30, null=True, blank=True)
-    apellido     = models.CharField('Apellido del Médico',max_length=45, null=False, blank=False)
-    sapellido    = models.CharField('Segundo Apellido del Médico',max_length=45, null=True, blank=True)
-    direccion    = models.CharField('Direccion del Médico', max_length=200)
-    especialidad = models.CharField('Especialidad del Médico', max_length=200)
+    nombre       = models.CharField('Nombres del Cuidador',max_length=30, null=False, blank=False)
+    snombre      = models.CharField('Segundo Nombre del Cuidador',max_length=30, null=True, blank=True)
+    apellido     = models.CharField('Apellido del Cuidador',max_length=45, null=False, blank=False)
+    sapellido    = models.CharField('Segundo Apellido del Cuidador',max_length=45, null=True, blank=True)
+    direccion    = models.CharField('Direccion del Cuidador', max_length=200)
+    especialidad = models.CharField('Especialidad del Cuidador', max_length=200)
     created_date = models.DateTimeField('Fecha de ingreso', auto_now_add=True)
     update_date  = models.DateTimeField('Fecha actualizacion', auto_now=True)
     username     = models.CharField('Nombre de Usuario', unique=True, max_length=50) 
@@ -74,23 +72,6 @@ class Medico(AbstractUser):
 
     def has_module_perms(self, app_label):
         return True
-
-
-class Registro(models.Model):
-    idregistro   =  models.IntegerField('Numero de registro',primary_key=True)
-    fecha        = models.DateTimeField('Fecha de ingreso', auto_now_add=True)
-    tipoAtencion = models.CharField('Tipo de Atencion', max_length=200)
-    Servicio     = models.CharField('Servicio', max_length=200)
-    Diagnostico  = models.CharField('Diagnostico', max_length=200)
-
-    class meta:
-        verbose_name = 'Registro'
-        verbose_name_plural = 'Registros'
-
-    def __str__(self):
-        return self.idregistro
-
-
 class Paciente(models.Model):
     lugarAtencion     = models.ForeignKey(LugarAtencion, on_delete=models.CASCADE)
     rut               = models.CharField(primary_key=True, max_length=12)
@@ -137,26 +118,26 @@ class Historial(models.Model):
 
 class SignosVitales(models.Model):
     id_signosvitales          = models.AutoField('id signos vitales', primary_key=True)
-    temperatura               = models.CharField('Temperatura', null=True, max_length=50, blank=True)
-    respiracion               = models.CharField('Respiracion', null=True, max_length=50, blank=True)
+    fecha_creacion            = models.DateTimeField('Fecha registro', auto_now=True)
     presion_arterial          = models.CharField('Tension', null=True, max_length=50, blank=True)
+    presion_arterial_media    = models.CharField('Presión Arterial Media', null=True, max_length=50, blank=True)
+    respiracion               = models.CharField('Respiracion', null=True, max_length=50, blank=True)
+    frecuencia_cardiaca       = models.CharField('Frecuencia Cardiaca', null=True, max_length=50, blank=True)
+    temperatura               = models.CharField('Temperatura', null=True, max_length=50, blank=True)
+    saturacion                = models.CharField('Saturacion', null=True, max_length=50, blank=True)
+    peso                      = models.CharField('Peso', null=True, max_length=50, blank=True)
+    talla                     = models.CharField('Talla', null=True, max_length=50, blank=True)
     evaluacion                = models.CharField('Evaluacion', null=True, max_length=150, blank=True)
     miccion                   = models.CharField('Miccion', null=True, max_length=150, blank=True)
     vomito                    = models.CharField('Vomito', null=True, max_length=150, blank=True)
     flatos                    = models.CharField('Flatos', null=True, max_length=50, blank=True)
     dolor                     = models.CharField('Dolor', null=True, max_length=50, blank=True)
     estrennimiento            = models.CharField('Estreñimiento', null=True, max_length=100, blank=True)
-    frecuencia_cardiaca       = models.CharField('Frecuencia Cardiaca', null=True, max_length=50, blank=True)
-    saturacion                = models.CharField('Saturacion', null=True, max_length=50, blank=True)
     suenno                    = models.CharField('sueño', null=True, max_length=50, blank=True)
-    presion_arterial_media    = models.CharField('Presión Arterial Media', null=True, max_length=50, blank=True)
-    peso                      = models.CharField('Peso', null=True, max_length=50, blank=True)
-    talla                     = models.CharField('Talla', null=True, max_length=50, blank=True)
     alimentacion              = models.CharField('Alimentacion', null=True, max_length=50, blank=True)
     higiene                   = models.CharField('Higiene', null=True, max_length=50, blank=True)
     observaciones             = models.CharField('Observaciones', null=True, max_length=50, blank=True)
     paciente_rut              = models.ForeignKey(Paciente,on_delete=models.CASCADE)
-    fecha_creacion            = models.DateTimeField('Fecha registro', auto_now=True)
     class meta:
         verbose_name = 'Signos Vitales'
         verbose_name_plural = 'Signos Vitales'
@@ -168,8 +149,8 @@ class Evaluacion(models.Model):
     idevaluacion     = models.AutoField('Id evaluacion', primary_key=True)
     fecha_evaluacion = models.DateTimeField('Fecha de evaluacion', null=False, auto_now=True)
     hora             = models.DateTimeField('Hora evolucion', null=False, auto_now=True)
-    descripcion      = models.TextField('Descripcion', max_length=2000)
     cuidador         = models.CharField('Cuidador', max_length=30)
+    descripcion      = models.TextField('Descripcion', max_length=2000)
     rut              = models.ForeignKey(Paciente, on_delete=models.CASCADE)
 
     class meta:
