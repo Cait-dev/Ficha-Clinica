@@ -3,7 +3,7 @@ from django.http import  JsonResponse
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
-from pymysql import NULL
+
 
 from .utils import render_to_pdf
 from .models import Evaluacion, Historial,  Medico, Paciente, SignosVitales
